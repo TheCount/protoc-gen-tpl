@@ -10,14 +10,16 @@ import (
 
 // parameterHelp contains the help text for the plugin parameters.
 const parameterHelp = `
-  protoc-gen-tpl requires a comma-separated list of parameters in key=value
-  format.
+  Specify protoc-gen-tpl options as
+
+    --tpl_out=key1=value1,key2=value2,…:output_dir
+
   The following keys are recognized:
 
   template
-    Path to file template. This can be a glob to specify multiple template files
-    which define a template.
-		See https://golang.org/pkg/text/template/ for template syntax.
+    Path to file template. The value can be a glob to specify multiple template
+    files which define a template.
+    See https://golang.org/pkg/text/template/ for template syntax.
 
   msgopt
     Message option to use as data input. The value must use protobuf syntax to
