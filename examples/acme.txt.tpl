@@ -1,5 +1,6 @@
 List of supported models:
 {{ range .models -}}
 * {{.}}
-{{- end }}
+{{ end }}
+Raw data input:
 {{ printf "%s" . }}
