@@ -45,7 +45,7 @@ func (m message) string(indent string) string {
 	sort.Slice(pairs, func(i, j int) bool {
 		return pairs[i].key.(string) < pairs[j].key.(string)
 	})
-	pairStrings := make([]string, len(pairs))
+	pairStrings := make([]string, 0, len(pairs))
 	for _, pair := range pairs {
 		pairStrings = append(pairStrings, fmt.Sprintf("%s  %s: %s",
 			indent, pair.key, valueString(indent+"  ", pair.value)))
