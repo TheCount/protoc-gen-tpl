@@ -65,9 +65,6 @@ func (op *optionPath) Validate() error {
 	if !op.OptionFieldName.IsValid() {
 		return fmt.Errorf("option field name '%s' is invalid", op.OptionFieldName)
 	}
-	if op.OptionFieldName == "" {
-		return errors.New("option field name is empty")
-	}
 	for _, subfield := range op.Subfields {
 		if !subfield.IsValid() {
 			return fmt.Errorf("invalid subfield '%s' in %s", subfield, op)
