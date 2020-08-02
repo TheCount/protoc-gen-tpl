@@ -95,7 +95,8 @@ func sliceString(indent string, value reflect.Value) string {
 			// empty message
 			continue
 		}
-		strs = append(strs, valueString(indent+"  ", elem.Interface()))
+		strs = append(strs, fmt.Sprintf("%s  %s",
+			indent, valueString(indent+"  ", elem.Interface())))
 	}
 	if len(strs) == 0 {
 		return "[]"
