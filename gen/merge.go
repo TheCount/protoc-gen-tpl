@@ -11,16 +11,18 @@ import (
 
 // mergeData merges the data from the specified files into target.
 func mergeData(
-	target protoreflect.Message, files *protoregistry.Files,
+	target protoreflect.Message,
 	msgxt protoreflect.ExtensionType, msgFields []protoreflect.Name,
 ) (err error) {
-	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-		if err = mergeDataFromFile(target, fd, msgxt, msgFields); err != nil {
-			err = fmt.Errorf("merge from file '%s': %w", fd.Path(), err)
-			return false
-		}
-		return true
-	})
+	protoregistry.GlobalFiles.RangeFiles(
+		func(fd protoreflect.FileDescriptor) bool {
+			if err = mergeDataFromFile(target, fd, msgxt, msgFields); err != nil {
+				err = fmt.Errorf("merge from file '%s': %w", fd.Path(), err)
+				return false
+			}
+			return true
+		},
+	)
 	return
 }
 

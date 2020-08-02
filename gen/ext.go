@@ -5,36 +5,36 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 // getExtensions obtains the extension types for the option to provide the data.
 // It also returns an empty data message.
-func getExtensions(
-	files *protoregistry.Files, options options,
-) (msgxt protoreflect.ExtensionType, data protoreflect.Message, err error) {
-	desc, err := files.FindDescriptorByName(options.Message.OptionFieldName)
+func getExtensions(options options) (
+	msgxt protoreflect.ExtensionType, data protoreflect.Message, err error,
+) {
+	msgxt, err = protoregistry.GlobalTypes.FindExtensionByName(
+		options.Message.OptionFieldName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("find message option descriptor '%s': %w",
+		return nil, nil, fmt.Errorf("find extension '%s': %w",
 			options.Message.OptionFieldName, err)
 	}
-	msgDesc, ok := desc.(protoreflect.ExtensionDescriptor)
-	if !ok || !msgDesc.IsExtension() {
-		return nil, nil, fmt.Errorf("not an extension field: %s",
-			options.Message.OptionFieldName)
-	}
+	msgDesc := msgxt.TypeDescriptor()
 	if msgDesc.ContainingMessage().FullName() !=
 		"google.protobuf.MessageOptions" {
 		return nil, nil,
 			fmt.Errorf("not a message option: %s (containing message is '%s')",
 				options.Message.OptionFieldName, msgDesc.ContainingMessage().FullName())
 	}
-	msgxt = dynamicpb.NewExtensionType(msgDesc)
 	subDesc, err := getSubDescriptor(msgDesc, options.Message.Subfields)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get subdescriptor: %w", err)
 	}
-	data = dynamicpb.NewMessage(subDesc).ProtoReflect()
+	dataType, err :=
+		protoregistry.GlobalTypes.FindMessageByName(subDesc.FullName())
+	if err != nil {
+		return nil, nil, fmt.Errorf("find data type: %w", err)
+	}
+	data = dataType.New()
 	return
 }
 
