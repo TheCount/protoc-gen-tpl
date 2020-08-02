@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -45,7 +46,7 @@ func mergeDataFromFile(
 func mergeDataFromMsg(
 	target protoreflect.Message, md protoreflect.MessageDescriptor,
 	msgxt protoreflect.ExtensionType, msgFields []protoreflect.Name,
-) error {
+) (err error) {
 	// process nested messages first
 	mds := md.Messages()
 	for i := 0; i != mds.Len(); i++ {
@@ -57,10 +58,20 @@ func mergeDataFromMsg(
 	}
 	// now process options
 	msgOpt := md.Options()
-	if !proto.HasExtension(msgOpt, msgxt) {
-		return nil
+	var xtMsg protoreflect.Message
+	if proto.HasExtension(msgOpt, msgxt) {
+		xtMsg = proto.GetExtension(msgOpt, msgxt).(protoreflect.Message)
+	} else {
+		// Extension might hide in unknown fields
+		if xtMsg, err = extractUnknown(
+			msgOpt.ProtoReflect().GetUnknown(), msgxt,
+		); err != nil {
+			return fmt.Errorf("extract option from unknown fields: %w", err)
+		}
+		if xtMsg == nil {
+			return nil
+		}
 	}
-	xtMsg := proto.GetExtension(msgOpt, msgxt).(protoreflect.Message)
 	return mergeDataFromOpt(target, xtMsg, msgFields)
 }
 
@@ -154,4 +165,33 @@ func mergeMap(target, src protoreflect.Map) (err error) {
 		return true
 	})
 	return
+}
+
+// extractUnknown attempts to extract a message of the specified extension
+// type from the given concatenation of raw fields. If the field could not
+// be found, extractUnknown returns (nil, nil).
+func extractUnknown(
+	rawFields []byte, xt protoreflect.ExtensionType,
+) (protoreflect.Message, error) {
+	xtidx := xt.TypeDescriptor().Number()
+	for len(rawFields) > 0 {
+		idx, typ, n := protowire.ConsumeField(rawFields)
+		if n < 0 {
+			return nil, fmt.Errorf("parsing raw field: %w", protowire.ParseError(n))
+		}
+		if idx != xtidx {
+			rawFields = rawFields[n:]
+			continue
+		}
+		if typ != protowire.BytesType {
+			return nil, fmt.Errorf("bad type for extension message: %d", typ)
+		}
+		rawMsg, _ := protowire.ConsumeBytes(rawFields[protowire.SizeTag(idx):])
+		msg := xt.New().Message().Interface()
+		if err := proto.Unmarshal(rawMsg, msg); err != nil {
+			return nil, fmt.Errorf("unmarshal extension message: %w", err)
+		}
+		return msg.ProtoReflect(), nil
+	}
+	return nil, nil
 }
