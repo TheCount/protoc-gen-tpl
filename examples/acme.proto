@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package example;
+
+import "google/protobuf/descriptor.proto";
+
+message Option {
+  repeated string models = 1;
+}
+
+extend google.protobuf.MessageOptions {
+  Option acme_option = 50000;
+}
+
+message ACMEProduct {
+  message NestedHoover {
+    option (acme_option) = {
+      models: [ "DustDevil 3000", "Wheezer XT" ]
+    };
+
+    float suckiness = 1;
+  }
+
+  string name = 1;
+
+  oneof type {
+    NestedHoover hoover = 2;
+    ExternalBuzzer buzzer = 3;
+  }
+}
+
+message ExternalBuzzer {
+  option (acme_option) = {
+    models: [ "Annoyotron 0559", "Scarifyer Inquisition 1500" ]
+  };
+
+  float fizzes_per_buzz = 1;
+}
