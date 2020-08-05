@@ -157,10 +157,14 @@ func parseOptionPath(in string) (*optionPath, error) {
 	if idx < 0 {
 		return nil, errors.New("missing ')' in option path")
 	}
-	return &optionPath{
+	result := &optionPath{
 		OptionFieldName: protoreflect.FullName(in[1:idx]),
-		Subfields:       protoreflectNames(strings.Split(in[idx+1:], ".")),
-	}, nil
+	}
+	if len(in) == idx+1 {
+		return result, nil
+	}
+	result.Subfields = protoreflectNames(strings.Split(in[idx+2:], "."))
+	return result, nil
 }
 
 // protoreflectNames converts []string to []protoreflect.Name
