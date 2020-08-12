@@ -46,6 +46,13 @@ func File(req *pluginpb.CodeGeneratorRequest) (
 		return nil, err
 	}
 	rawData := makeRawMessage(data)
+	for key, value := range params.Extra {
+		if rawData[key] != nil {
+			return nil,
+				fmt.Errorf("extra data key '%s' already present in proto data", key)
+		}
+		rawData[key] = value
+	}
 	var sb strings.Builder
 	if err = tpl.Execute(&sb, rawData); err != nil {
 		return nil, fmt.Errorf("execute template: %w", err)

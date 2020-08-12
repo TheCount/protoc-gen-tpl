@@ -1,8 +1,10 @@
 package gen
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -28,6 +30,9 @@ const parameterHelp = `
     the form
 
       (fully.qualified.message.option.field).subfield1.subfield2…
+
+	extra=file.json
+		Optional file with JSON data to provide as additional data to the template.
 
   out
     Path to output file.
@@ -100,6 +105,9 @@ type params struct {
 	// Options specifies which option messages to use as a basis for the data.
 	Options options
 
+	// Extra optionally contains extra data for the template.
+	Extra map[string]interface{}
+
 	// OutputPath is the path to the output file.
 	OutputPath string
 }
@@ -136,6 +144,18 @@ func parseParams(in string) (*params, error) {
 					part[idx+1:], err)
 			}
 			result.Options.Message = path
+		case "extra":
+			filename := part[idx+1:]
+			f, err := os.Open(filename)
+			if err != nil {
+				return nil, fmt.Errorf("open extra data file '%s': %w", filename, err)
+			}
+			defer f.Close()
+			decoder := json.NewDecoder(f)
+			if err = decoder.Decode(&result.Extra); err != nil {
+				return nil, fmt.Errorf("decoding extra data file '%s': %w",
+					filename, err)
+			}
 		case "out":
 			result.OutputPath = part[idx+1:]
 		}
