@@ -3,6 +3,7 @@ package gen
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
@@ -14,17 +15,26 @@ import (
 func mergeData(
 	target protoreflect.Message,
 	msgxt protoreflect.ExtensionType, msgFields []protoreflect.Name,
-) (err error) {
+) error {
+	// Create deterministic file order.
+	fds := make([]protoreflect.FileDescriptor, 0,
+		protoregistry.GlobalFiles.NumFiles())
 	protoregistry.GlobalFiles.RangeFiles(
 		func(fd protoreflect.FileDescriptor) bool {
-			if err = mergeDataFromFile(target, fd, msgxt, msgFields); err != nil {
-				err = fmt.Errorf("merge from file '%s': %w", fd.Path(), err)
-				return false
-			}
+			fds = append(fds, fd)
 			return true
 		},
 	)
-	return
+	sort.Slice(fds, func(i, j int) bool {
+		return fds[i].Path() < fds[j].Path()
+	})
+	// merge file data
+	for _, fd := range fds {
+		if err := mergeDataFromFile(target, fd, msgxt, msgFields); err != nil {
+			return fmt.Errorf("merge from file '%s': %w", fd.Path(), err)
+		}
+	}
+	return nil
 }
 
 // mergeDataFromFile merges the data from the specified file into target.
@@ -91,28 +101,41 @@ func mergeDataFromOpt(
 }
 
 // mergeMsg merges the given source message into the target message.
-func mergeMsg(target, src protoreflect.Message) (err error) {
+func mergeMsg(target, src protoreflect.Message) error {
+	// Create deterministic range order
+	type fdv struct {
+		fd protoreflect.FieldDescriptor
+		v  protoreflect.Value
+	}
+	var fdvs []fdv
 	src.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		fdvs = append(fdvs, fdv{fd, v})
+		return true
+	})
+	sort.Slice(fdvs, func(i, j int) bool {
+		return fdvs[i].fd.Number() < fdvs[j].fd.Number()
+	})
+	// Now merge
+	for _, fdv := range fdvs {
+		fd, v := fdv.fd, fdv.v
 		// check if wrong oneof field is set in target before merging value
 		oneof := fd.ContainingOneof()
 		if oneof != nil {
 			set := target.WhichOneof(oneof)
 			if set != nil && set != fd {
-				err = fmt.Errorf(
+				return fmt.Errorf(
 					"unable to merge field '%s' value '%s' from oneof '%s' "+
 						"in message '%s': field '%s' is set in target",
 					fd.FullName(), v, oneof.FullName(),
 					src.Type().Descriptor().FullName(), set.FullName(),
 				)
-				return false
 			}
 		}
-		if err = mergeField(target, fd, v); err != nil {
-			err = fmt.Errorf("merge field '%s': %w", fd.FullName(), err)
+		if err := mergeField(target, fd, v); err != nil {
+			return fmt.Errorf("merge field '%s': %w", fd.FullName(), err)
 		}
-		return err == nil
-	})
-	return err
+	}
+	return nil
 }
 
 // mergeField merges the given value into target at the specified field
