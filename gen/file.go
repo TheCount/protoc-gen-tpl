@@ -3,6 +3,7 @@ package gen
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -65,7 +66,21 @@ func File(req *pluginpb.CodeGeneratorRequest) (
 
 // loadTemplate loads the template definition from the specified files.
 func loadTemplate(glob string) (*template.Template, error) {
-	tpl, err := template.ParseGlob(glob)
+	// We need to execute the glob manually because the template package needs
+	// an explicit file name for template name.
+	files, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, fmt.Errorf("glob: %w", err)
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no matching files: %s", glob)
+	}
+	tpl, err := template.New(filepath.Base(files[0])).
+		Funcs(template.FuncMap{
+			"setglob": setglob,
+			"getglob": getglob,
+			"delglob": delglob,
+		}).ParseFiles(files...)
 	if err != nil {
 		return nil, fmt.Errorf("parse template pattern '%s': %w", glob, err)
 	}
