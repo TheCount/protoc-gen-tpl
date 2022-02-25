@@ -245,6 +245,8 @@ func getKindType(kind protoreflect.Kind) reflect.Type {
 		return nil
 	case protoreflect.BoolKind:
 		return reflect.TypeOf(false)
+	case protoreflect.EnumKind:
+		return reflect.TypeOf(enumValue(""))
 	case protoreflect.Int32Kind, protoreflect.Sint32Kind,
 		protoreflect.Sfixed32Kind:
 		return reflect.TypeOf(int32(0))
