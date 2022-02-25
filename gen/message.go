@@ -168,12 +168,18 @@ func mapString(indent string, value reflect.Value) string {
 // makeRawMessage converts the specified source message to a raw message.
 func makeRawMessage(src protoreflect.Message) message {
 	result := make(message)
-	// Set all fields, including unpopulated ones.
+	// Set all fields, including unpopulated ones (unless they're oneofs).
 	fields := src.Descriptor().Fields()
 	for i := 0; i != fields.Len(); i++ {
 		fd := fields.Get(i)
 		if !src.Has(fd) {
-			result[string(fd.Name())] = reflect.Zero(getFieldType(fd)).Interface()
+			switch {
+			case fd.ContainingOneof() != nil: // omit this field
+			case fd.Kind() == protoreflect.EnumKind:
+				result[string(fd.Name())] = enumValue(fd.DefaultEnumValue().Name())
+			default:
+				result[string(fd.Name())] = reflect.Zero(getFieldType(fd)).Interface()
+			}
 			continue
 		}
 		v := src.Get(fd)
@@ -182,6 +188,9 @@ func makeRawMessage(src protoreflect.Message) message {
 			result[string(fd.Name())] = makeRawList(v.List())
 		case fd.IsMap():
 			result[string(fd.Name())] = makeRawMap(getFieldType(fd), v.Map())
+		case fd.Kind() == protoreflect.EnumKind:
+			result[string(fd.Name())] =
+				enumValue(fd.Enum().Values().ByNumber(v.Enum()).Name())
 		case fd.Kind() == protoreflect.MessageKind:
 			result[string(fd.Name())] = makeRawMessage(v.Message())
 		default:

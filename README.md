@@ -13,3 +13,7 @@ go get github.com/TheCount/protoc-gen-tpl/cmd/protoc-gen-tpl
 ```
 
 In a terminal, run `protoc --tpl_out=. yourfile.proto` to get help on usage and options.
+
+## Known bugs
+
+Templates do not render `repeated` enum fields or maps with enums as values correctly.
