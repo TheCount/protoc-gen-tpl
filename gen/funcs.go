@@ -11,7 +11,7 @@ import (
 // circumvents this issue.
 var globals = make(map[string]interface{})
 
-// globalsMtx protects globals agains concurrent access.
+// globalsMtx protects globals against concurrent access.
 var globalsMtx sync.Mutex
 
 // setglob sets the specified named global variable to the given value.
