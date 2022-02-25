@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -29,7 +29,7 @@ func generate() *pluginpb.CodeGeneratorResponse {
 		SupportedFeatures: proto.Uint64(uint64(
 			pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)),
 	}
-	buf, err := ioutil.ReadAll(os.Stdin)
+	buf, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		resp.Error = proto.String(fmt.Sprintf("read CodeGeneratorRequest: %s", err))
 		return resp
