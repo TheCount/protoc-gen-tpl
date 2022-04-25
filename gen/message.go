@@ -176,7 +176,15 @@ func makeRawMessage(src protoreflect.Message) message {
 			switch {
 			case fd.ContainingOneof() != nil: // omit this field
 			case fd.Kind() == protoreflect.EnumKind:
-				result[string(fd.Name())] = enumValue(fd.DefaultEnumValue().Name())
+				switch {
+				case fd.IsList():
+					result[string(fd.Name())] = []enumValue{}
+				case fd.DefaultEnumValue() == nil:
+					result[string(fd.Name())] =
+						enumValue(fd.Enum().Values().ByNumber(fd.Default().Enum()).Name())
+				default:
+					result[string(fd.Name())] = enumValue(fd.DefaultEnumValue().Name())
+				}
 			default:
 				result[string(fd.Name())] = reflect.Zero(getFieldType(fd)).Interface()
 			}
