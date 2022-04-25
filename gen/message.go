@@ -9,6 +9,9 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// origMsg is the message key to the original protobuf message.
+const origMsg = "_protomsg"
+
 // enumValue describes an enum value as a string.
 type enumValue string
 
@@ -34,7 +37,7 @@ func (m message) String() string {
 func (m message) string(indent string) string {
 	pairs := make([]kvpair, 0, len(m))
 	for k, v := range m {
-		if v == nil {
+		if k == "" || k[0] == '_' || v == nil {
 			continue
 		}
 		pairs = append(pairs, kvpair{k, v})
@@ -168,6 +171,7 @@ func mapString(indent string, value reflect.Value) string {
 // makeRawMessage converts the specified source message to a raw message.
 func makeRawMessage(src protoreflect.Message) message {
 	result := make(message)
+	result[origMsg] = src.Interface()
 	// Set all fields, including unpopulated ones (unless they're oneofs).
 	fields := src.Descriptor().Fields()
 	for i := 0; i != fields.Len(); i++ {

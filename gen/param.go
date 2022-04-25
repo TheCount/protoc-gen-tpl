@@ -31,6 +31,9 @@ const parameterHelp = `
 
       (fully.qualified.message.option.field).subfield1.subfield2…
 
+		Template data may contain additional fields starting with an underscore.
+		These are currently for internal use only.
+
 	extra=file.json
 		Optional file with JSON data to provide as additional data to the template.
 
